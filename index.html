@@ -1,234 +1,358 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cotizador Preventivas CDA BARRANCABERMEJA</title>
-
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Cotización Revisión Preventiva</title>
     <style>
+        :root{
+            /* Ajusta aquí las alturas de cabecera y pie (evitan solapar contenido).
+               Usa cm para impresión (ej: 3cm). */
+            --header-height: 3.0cm;
+            --footer-height: 3.5cm;
+            /* Coloca URLs por defecto (reemplazables desde JS) */
+            --top-image: none;
+            --bottom-image: none;
+
+            /* Ajustes de impresión para que los fondos se impriman tal como se ven */
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            color-adjust: exact;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
             font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #001DFF 0%, #0012A8 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
         }
 
-        h1 { text-align: center; color: white; margin-bottom: 20px; }
-
-        .login-container, .form-section, .preview-section {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 0 10px rgba(0,0,0,.2);
-        }
-
-        .container {
-            display: none;
-            max-width: 1200px;
-            margin: auto;
-            gap: 20px;
-            grid-template-columns: 1fr 1fr;
-        }
+        /* Contenedor principal y secciones (igual que antes) */
+        .container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; display: none; }
         .container.active { display: grid; }
+        .form-section, .preview-section { background: white; border-radius: 15px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .header-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+        h2 { color:#667eea; margin:0; font-size:24px; }
+        label, .form-group { margin-bottom: 8px; color:#333; font-weight:bold; font-size:14px; }
+        input, select { width:100%; padding:12px; border:2px solid #e0e0e0; border-radius:8px; font-size:14px; }
+        .btn-print { width:100%; padding:12px; background:#4CAF50; color:white; border:none; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer; margin-bottom:20px; }
 
-        .btn-login, .btn-generate {
-            width:100%;
-            padding:12px;
-            border:none;
-            border-radius:8px;
-            background:#001DFF;
-            color:white;
-            cursor:pointer;
-            font-weight:bold;
-        }
-
-        .btn-logout {
-            background:#F26522;
-            color:white;
-            padding:8px 12px;
-            border-radius:6px;
-            cursor:pointer;
-        }
-
-        table {
-            width:100%;
-            border-collapse:collapse;
-        }
-        th,td {
-            border:1px solid black;
-            padding:6px;
-            font-size:12px;
-        }
-
+        /* DOCUMENT - esta es la hoja tamaño carta virtual */
         .document {
-            width: 21cm;
-            min-height: 27.5cm;
-            padding: 100px 40px 100px 40px; /* espacio para membretes */
-            background:white;
-            border: 1px solid #ccc;
+            /* tamaño de visualización Aprox. carta (ancho real para impresión) */
+            width: 21.59cm;
+            min-height: 27.94cm;
+            margin: 0 auto;
             position: relative;
+            /* El contenido debe ir por encima de las imágenes de membrete */
+            background: white;
+            border: 1px solid #ddd;
+            padding: 1.8cm 2.5cm; /* padding lateral y un padding base; luego añadimos top/bottom para las imagenes */
+            /* Añadimos padding superior e inferior según las variables para evitar solape */
+            padding-top: calc(var(--header-height) + 1.5cm);   /* + espacio extra para separación del contenido */
+            padding-bottom: calc(var(--footer-height) + 1.5cm);
+            overflow: hidden;
         }
 
-        /* Membretes */
-        #membreteSuperior {
-            position:absolute;
-            top:0;
-            left:0;
-            width:100%;
-            height:100px;
-            object-fit:cover;
-        }
-        #membreteInferior {
-            position:absolute;
-            bottom:0;
-            left:0;
-            width:100%;
-            height:100px;
-            object-fit:cover;
+        /* Usamos pseudo-elementos ::before (cabecera) y ::after (pie) para colocar las imágenes.
+           Están detrás del contenido (.document-inner tiene z-index:1). */
+        .document::before,
+        .document::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            width: 100%;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 100% 100%; /* forzar a ajustar a la anchura y altura del espacio reservado */
+            z-index: 0;
+            pointer-events: none;
         }
 
+        /* Cabecera (arriba) */
+        .document::before {
+            top: 0;
+            height: var(--header-height);
+            background-image: var(--top-image);
+        }
+
+        /* Pie (abajo) */
+        .document::after {
+            bottom: 0;
+            height: var(--footer-height);
+            background-image: var(--bottom-image);
+        }
+
+        /* Contenido sobre las imágenes */
+        .document-inner { position: relative; z-index: 1; }
+
+        /* Resto del estilo del documento (igual que antes) */
+        .document-header { text-align: left; margin-bottom: 25px; }
+        .document-date { font-size: 12px; margin-bottom: 15px; }
+        .document-recipient { margin-bottom: 15px; line-height: 1.5; font-size: 12px; }
+        .document-ref { margin-bottom: 20px; font-weight: bold; font-size: 12px; }
+        .document-content { text-align: justify; line-height: 1.6; font-size: 11px; }
+        .document-content p { margin-bottom: 12px; }
+        table { width:100%; border-collapse:collapse; margin:15px 0; font-size:11px; }
+        table th, table td { border:1px solid #333; padding:8px; text-align:center; }
+        table th { background:#f0f0f0; font-weight:bold; }
+        .numbered-list { margin:15px 0; }
+        .numbered-list p { margin-bottom:12px; text-indent:-25px; padding-left:25px; }
+        .document-footer { margin-top:30px; font-size:11px; }
+        .signature-line { margin-top:40px; border-top:1px solid #333; width:300px; padding-top:10px; font-size:11px; }
+
+        /* Impresion */
         @media print {
-            h1, img:not(.printable) { display:none; }
-            .form-section, .btn-login, .btn-generate, .btn-print { display:none; }
             body { background:white; padding:0; }
-            .document { border:none; }
+            .container { grid-template-columns:1fr; }
+            .form-section { display:none; }
+            .preview-section { box-shadow:none; padding:0; }
+            .btn-print { display:none; }
+            .document { border:none; box-shadow:none; margin:0; /* Mantener padding que evita solapamiento */ }
+            @page { size: letter; margin: 0; } /* poner a 0 porque la hoja .document contiene los márgenes reales */
         }
+
+        @media (max-width: 968px) { .container { grid-template-columns: 1fr; } }
     </style>
 </head>
-
 <body>
-
-    <!-- Logo principal -->
-    <div style="text-align:center; margin-bottom:10px;">
-        <img class="printable" id="logoPrincipal" 
-        src="https://raw.githubusercontent.com/TU_USUARIO/TU_REPO/main/logo.jpg" 
-        style="max-height:120px;">
-    </div>
-
-    <h1>Cotizador Preventivas CDA BARRANCABERMEJA</h1>
-
-    <!-- LOGIN -->
+    <!-- Pantalla de Login (idéntico al anterior; lo mantengo para contexto) -->
     <div class="login-container" id="loginScreen">
-        <h2>Acceso al Sistema</h2>
-        <div id="errorMessage" style="display:none;color:red;">Datos incorrectos</div>
-
-        <input id="username" placeholder="Usuario"><br><br>
-        <input id="password" type="password" placeholder="Contraseña"><br><br>
-        <button class="btn-login" onclick="login()">Ingresar</button>
+        <h2>🔐 Acceso al Sistema</h2>
+        <div class="error-message" id="errorMessage">Usuario o contraseña incorrectos</div>
+        <form class="login-form" onsubmit="login(event)">
+            <div class="form-group">
+                <label>Usuario:</label>
+                <input type="text" id="username" required>
+            </div>
+            <div class="form-group">
+                <label>Contraseña:</label>
+                <input type="password" id="password" required>
+            </div>
+            <button type="submit" class="btn-login">Ingresar</button>
+        </form>
     </div>
 
-    <!-- SISTEMA -->
     <div class="container" id="mainContainer">
-
         <div class="form-section">
-            <h2>Datos</h2>
-            <button class="btn-logout" onclick="logout()">Cerrar Sesión</button><br><br>
+            <div class="header-bar">
+                <h2>📋 Datos de la Cotización</h2>
+                <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
+            </div>
 
-            <label>Ciudad</label><input id="ciudad" value="Barrancabermeja"><br><br>
-            <label>Cliente</label><input id="cliente" value="TRANSCOLTUR"><br><br>
-            <label>NIT</label><input id="nit" value="830.053.894-6"><br><br>
-            <label>Placas</label><input id="placas" value="JTW104"><br><br>
-            <label>Modelo</label><input id="modelo" value="2022"><br><br>
+            <div class="form-group">
+                <label>Ciudad:</label>
+                <input type="text" id="ciudad" placeholder="Ej: Barrancabermeja" value="Barrancabermeja">
+            </div>
 
-            <label>Valor</label><br>
-            <label><input type="radio" name="valor" value="50000" checked> $50.000</label><br>
-            <label><input type="radio" name="valor" value="60000"> $60.000</label><br>
-            <label><input type="radio" name="valor" value=""> Otro valor</label><br>
-            <input type="number" id="valorDigitado" placeholder="Ingrese valor" style="display:none;"><br><br>
+            <div class="form-group">
+                <label>Nombre del Cliente:</label>
+                <input type="text" id="cliente" placeholder="Ej: TRANSCOLTUR" value="TRANSCOLTUR">
+            </div>
+
+            <div class="form-group">
+                <label>NIT o Cédula:</label>
+                <input type="text" id="nit" placeholder="Ej: 830.053.894-6" value="830.053.894-6">
+            </div>
+
+            <div class="form-group">
+                <label>Placas del Vehículo:</label>
+                <input type="text" id="placas" placeholder="Ej: JTW104" value="JTW104">
+            </div>
+
+            <div class="form-group">
+                <label>Modelo del Vehículo:</label>
+                <input type="text" id="modelo" placeholder="Ej: 2022" value="2022">
+            </div>
+
+            <div class="form-group">
+                <label>Valor Total de la Cotización:</label>
+                <div class="radio-group">
+                    <div class="radio-option">
+                        <input type="radio" id="valor50" name="valor" value="50000" checked>
+                        <label for="valor50" style="margin: 0;">$50.000</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="valor60" name="valor" value="60000">
+                        <label for="valor60" style="margin: 0;">$60.000</label>
+                    </div>
+                </div>
+            </div>
 
             <button class="btn-generate" onclick="generarCotizacion()">Generar Cotización</button>
         </div>
 
         <div class="preview-section">
-            <button class="btn-login btn-print" onclick="window.print()">Imprimir PDF</button><br><br>
+            <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
 
             <div class="document" id="documento">
+                <div class="document-inner">
+                    <div class="document-header">
+                        <div class="document-date" id="fecha"></div>
+                        <div class="document-recipient">
+                            <strong>Señores:</strong><br>
+                            <span id="clienteDoc"></span><br>
+                            NIT: <span id="nitDoc"></span><br>
+                            <span id="ciudadDoc"></span>
+                        </div>
+                        <div class="document-ref">Ref.: Revisión Preventiva</div>
+                    </div>
 
-                <!-- MEMBRETES -->
-                <img id="membreteSuperior" 
-                src="https://raw.githubusercontent.com/TU_USUARIO/TU_REPO/main/membrete_superior.jpg">
+                    <div class="document-content">
+                        <p>Atendiendo su amable solicitud, me permito presentar para su consideración y análisis, la propuesta para la realización del servicio Revisión Preventiva:</p>
 
-                <img id="membreteInferior" 
-                src="https://raw.githubusercontent.com/TU_USUARIO/TU_REPO/main/membrete_inferior.jpg">
+                        <p><strong>• Costos del servicio:</strong></p>
 
-                <div style="position:relative; z-index:10;">
-                    <div id="fecha"></div><br>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Descripción</th>
+                                    <th>TARIFA</th>
+                                    <th>IVA</th>
+                                    <th>TOTAL</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td style="text-align: left;">Vehículo Liviano Público Placas <span id="placasTabla"></span>, Modelo <span id="modeloTabla"></span></td>
+                                    <td id="tarifa"></td>
+                                    <td id="iva"></td>
+                                    <td id="total"></td>
+                                </tr>
+                            </tbody>
+                        </table>
 
-                    <strong>Señores:</strong><br>
-                    <span id="clienteDoc"></span><br>
-                    NIT: <span id="nitDoc"></span><br>
-                    <span id="ciudadDoc"></span><br><br>
+                        <p>Dentro de esta cotización se debe tener en cuenta los siguientes aspectos:</p>
 
-                    <strong>Ref: Revisión Preventiva</strong><br><br>
+                        <div class="numbered-list">
+                            <p><strong>1.</strong> La revisión preventiva es un servicio diferente a la Revisión Técnico Mecánica y de Emisiones Contaminantes y no está vinculado a la entrega de un certificado.</p>
 
-                    <table>
-                        <tr><th>Descripción</th><th>Tarifa</th><th>IVA</th><th>Total</th></tr>
-                        <tr>
-                            <td>Vehículo Público Placa <span id="placasTabla"></span>, Modelo <span id="modeloTabla"></span></td>
-                            <td id="tarifa"></td>
-                            <td id="iva"></td>
-                            <td id="total"></td>
-                        </tr>
-                    </table><br><br>
+                            <p><strong>2.</strong> La revisión preventiva entrega un informe con un concepto aprobado o rechazado, según el cumplimiento de los ítems de inspección de la NTC 5375:2012, evaluados sensorialmente y mediante pruebas mecanizadas. Esto incluye la medición de la profundidad de labrado de las llantas de servicio y de repuesto, verificación de fugas de líquidos, y revisión del estado general de la parte inferior del vehículo de manera visual y al tacto, sin usar equipos especializados. También se comprueban los niveles de líquidos en los depósitos (frenos, limpiaparabrisas, refrigerante) y se realizan pruebas de alineación, suspensión, frenos, luces y emisiones contaminantes.</p>
 
-                    Cordialmente,<br><br><br>
-                    <strong>MARIAM ANDREA RUEDA SUSPEZ</strong><br>
-                    Gerente
+                            <p><strong>3.</strong> La revisión preventiva no reemplaza el mantenimiento preventivo, como se indica en artículo 3 de la resolución 0315 de 2013 aclarado por el artículo 1 de la resolución 378 de 2013 "Artículo 3.- Mantenimiento de vehículos. El mantenimiento de los vehículos será preventivo y correctivo. El mantenimiento preventivo constituye la serie de intervenciones y reparaciones realizadas al vehículo con la finalidad de anticipar fallas o desperfectos; no podrá entenderse por mantenimiento preventivo las actividades de revisión o inspección. El mantenimiento correctivo es aquel que se ejecuta en cualquier momento al vehículo y ante la evidencia de una falla en cualquiera de sus componentes."</p>
+                        </div>
+
+                        <p>De optar por nuestros servicios por favor realizar transferencia a la cuenta corriente del Banco de Bogotá No. 168604882 a nombre de INVERSIN LTDA.</p>
+
+                        <p>Colocamos nuestras instalaciones a su servicio.</p>
+
+                        <div class="document-footer">
+                            <p>Cordialmente,</p>
+                            <div class="signature-line">
+                                <strong>MARIAM ANDREA RUEDA SUSPEZ</strong><br>
+                                Gerente
+                            </div>
+                        </div>
+                    </div>
                 </div>
-
             </div>
+
         </div>
     </div>
 
-<script>
+    <script>
+        // ===== CONFIGURACIÓN =====
+        const USUARIO_VALIDO = 'admin';
+        const CONTRASENA_VALIDA = 'inversin2025';
 
-const USUARIO = "admin";
-const PASS = "inversin2025";
+        // Reemplaza estas URLs por las URLs "raw" de GitHub donde subirás las dos imágenes
+        // Ejemplo raw: https://raw.githubusercontent.com/TU_USUARIO/TU_REPO/main/header.jpg
+        const TOP_IMAGE_RAW_URL = 'https://raw.githubusercontent.com/TU_USUARIO/TU_REPO/main/header.jpg';   // imagen superior (logo/membrete)
+        const BOTTOM_IMAGE_RAW_URL = 'https://raw.githubusercontent.com/TU_USUARIO/TU_REPO/main/footer.jpg'; // imagen inferior (pie)
 
-function login(){
-    if(username.value===USUARIO && password.value===PASS){
-        loginScreen.style.display="none";
-        mainContainer.classList.add("active");
-        generarCotizacion();
-    } else {
-        errorMessage.style.display="block";
-    }
-}
+        // Ajusta las alturas si tus imágenes son más altas/pequeñas
+        // (también puedes cambiar las variables CSS en :root si prefieres)
+        const HEADER_HEIGHT_CM = '3.0cm';
+        const FOOTER_HEIGHT_CM = '3.5cm';
+        // ===== FIN CONFIGURACIÓN =====
 
-function logout(){
-    loginScreen.style.display="block";
-    mainContainer.classList.remove("active");
-}
+        // Login/logout
+        function login(event) {
+            event.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorMessage = document.getElementById('errorMessage');
 
-document.querySelectorAll('input[name="valor"]').forEach(r=>{
-    r.addEventListener("change",()=>{
-        valorDigitado.style.display = (r.value==="")?"block":"none";
-    });
-});
+            if (username === USUARIO_VALIDO && password === CONTRASENA_VALIDA) {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('mainContainer').classList.add('active');
+                generarCotizacion();
+            } else {
+                errorMessage.style.display = 'block';
+                setTimeout(() => { errorMessage.style.display = 'none'; }, 3000);
+            }
+        }
 
-function generarCotizacion(){
-    let valor = document.querySelector('input[name="valor"]:checked').value;
-    if(valor===""){
-        valor=parseInt(valorDigitado.value);
-        if(!valor){ alert("Ingrese valor válido"); return; }
-    }
-    valor=parseInt(valor);
+        function logout() {
+            if (confirm('¿Está seguro que desea cerrar sesión?')) {
+                document.getElementById('loginScreen').style.display = 'block';
+                document.getElementById('mainContainer').classList.remove('active');
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
+            }
+        }
 
-    const iva = Math.round(valor*0.19);
-    const tarifa = valor-iva;
+        // Formatea números a pesos
+        function formatearPeso(valor) {
+            return new Intl.NumberFormat('es-CO').format(valor);
+        }
 
-    fecha.textContent = `${ciudad.value}, ${new Date().toLocaleDateString('es-CO')}`;
-    clienteDoc.textContent = cliente.value;
-    nitDoc.textContent = nit.value;
-    ciudadDoc.textContent = ciudad.value;
-    placasTabla.textContent = placas.value;
-    modeloTabla.textContent = modelo.value;
-    tarifa.textContent = tarifa.toLocaleString("es-CO");
-    iva.textContent = iva.toLocaleString("es-CO");
-    total.textContent = valor.toLocaleString("es-CO");
-}
+        // Aplicar las imágenes (con variables CSS para usarlas en pseudo-elementos ::before/::after)
+        function aplicarImagenesFondo(topUrl, bottomUrl, headerHeight, footerHeight) {
+            // Usamos variables CSS con formato "url('...')" para background-image
+            const root = document.documentElement;
+            root.style.setProperty('--top-image', topUrl ? `url('${topUrl}')` : 'none');
+            root.style.setProperty('--bottom-image', bottomUrl ? `url('${bottomUrl}')` : 'none');
+            root.style.setProperty('--header-height', headerHeight || '3.0cm');
+            root.style.setProperty('--footer-height', footerHeight || '3.5cm');
+        }
 
-</script>
+        // Generar cotización y aplicar imagen de fondo
+        function generarCotizacion() {
+            const ciudad = document.getElementById('ciudad').value || 'Barrancabermeja';
+            const cliente = document.getElementById('cliente').value || 'CLIENTE';
+            const nit = document.getElementById('nit').value || '000.000.000-0';
+            const placas = document.getElementById('placas').value || 'ABC123';
+            const modelo = document.getElementById('modelo').value || '2022';
+            const valorTotal = parseInt(document.querySelector('input[name="valor"]:checked').value);
 
+            // Aplicar imagenes de cabecera y pie (reemplaza las constantes al principio con tus raw URLs)
+            aplicarImagenesFondo(TOP_IMAGE_RAW_URL, BOTTOM_IMAGE_RAW_URL, HEADER_HEIGHT_CM, FOOTER_HEIGHT_CM);
+
+            // Calcular tarifa e IVA
+            const iva = Math.round(valorTotal * 0.19);
+            const tarifa = valorTotal - iva;
+
+            // Obtener fecha actual en formato deseado
+            const fechaActual = new Date();
+            const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+            const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+            const diaSemana = diasSemana[fechaActual.getDay()];
+            const dia = fechaActual.getDate();
+            const mes = meses[fechaActual.getMonth()];
+            const año = fechaActual.getFullYear();
+            const fechaTexto = `${ciudad}, ${diaSemana} ${dia} de ${mes} de ${año}`;
+
+            // Actualizar documento
+            document.getElementById('fecha').textContent = fechaTexto;
+            document.getElementById('clienteDoc').textContent = cliente;
+            document.getElementById('nitDoc').textContent = nit;
+            document.getElementById('ciudadDoc').textContent = ciudad;
+            document.getElementById('placasTabla').textContent = placas;
+            document.getElementById('modeloTabla').textContent = modelo;
+            document.getElementById('tarifa').textContent = formatearPeso(tarifa);
+            document.getElementById('iva').textContent = formatearPeso(iva);
+            document.getElementById('total').textContent = formatearPeso(valorTotal);
+        }
+
+        // Ejecutar aplicar imágenes inicialmente (por si abre sin generar)
+        document.addEventListener('DOMContentLoaded', () => {
+            aplicarImagenesFondo(TOP_IMAGE_RAW_URL, BOTTOM_IMAGE_RAW_URL, HEADER_HEIGHT_CM, FOOTER_HEIGHT_CM);
+            generarCotizacion();
+        });
+    </script>
 </body>
 </html>
